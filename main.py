@@ -1,40 +1,38 @@
 from fastapi import FastAPI, HTTPException
-from enum import Enum
+from schemas import GenreURLChoices, User
+from users import USERS
 
 app = FastAPI()
 
 
-class GenderURLChoices(Enum):
-    MALE = "male"
-    FEMALE = "female"
-
-
-USERS = [
-    {"id": 1, "name": "Jon Doe", "gender": "male"},
-    {"id": 2, "name": "Andrew Ng", "gender": "male"},
-    {"id": 3, "name": "Hitesh Choudhary", "gender": "male"},
-    {"id": 4, "name": "Lily", "gender": "female"},
-    {"id": 5, "name": "Olivia", "gender": "Female"},
-]
-
-
 @app.get("/users")
-async def users() -> list[dict]:
-    return USERS
+async def users(
+    genre: GenreURLChoices | None = None, hasPosts: bool = False
+) -> list[User]:
+
+    users_list = [User(**u) for u in USERS]
+
+    if genre:
+        users_list = [u for u in users_list if u.genre.lower() == genre.value]
+
+    if hasPosts:
+        users_list = [u for u in users_list if len(u.posts) > 0]
+
+    return users_list
 
 
 @app.get("/user/{userId}")
-async def user(userId: int) -> dict:
+async def user(userId: int) -> User:
     user = None
     for u in USERS:
         if u["id"] == userId:
-            user = u
+            user = User(**u)
 
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 
-@app.get("/user/gender/{gender}")
-async def userByGender(gender: GenderURLChoices) -> list[dict]:
-    return [user for user in USERS if user["gender"].lower() == gender.value]
+@app.get("/user/genre/{genre}")
+async def userByGenre(genre: GenreURLChoices) -> list[dict]:
+    return [user for user in USERS if user["genre"].lower() == genre.value]
